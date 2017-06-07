@@ -1,0 +1,262 @@
+<!--
+@license
+Copyright (c) 2016 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1, user-scalable=yes">
+
+  <title>AMI-viewer AMI-loader AMI-widget</title>
+
+  <script src="bower_components/webcomponentsjs/webcomponents-lite.js"></script>
+  <link rel="import" href="ami-loader2.html">
+  <link rel="import" href="ami-viewer2.html">
+  <link rel="import" href="ami-widget2.html">
+  <link rel="import" href="/bower_components/ami-import/ami-import.html">
+  <link rel="import" href="/bower_components/paper-button/paper-button.html">
+
+  <style is="custom-style">
+
+    ami-viewer2{
+      height: 100%;
+      width: 100%;
+      border: 1px solid #aaaaaa;
+    }
+
+    #dropzone {
+      text-align: center;
+      height: 800px;
+      width: 90%;
+      padding: 10px;
+      outline: 1px dashed #aaaaaa;
+      outline-offset: -25px;
+    }
+
+    paper-button:hover {
+      background-color: #E0E0E0 !important;
+    }
+
+  </style>
+
+</head>
+
+<body>
+
+<input type="file" id="input" multiple>
+
+
+Load by URL: <textarea rows="1" cols="45" type="url" id="inputurls">https://cdn.rawgit.com/FNNDSC/data/master/dicom/adi_brain/36444336
+</textarea>
+<button onclick="LoadUrls()">Load</button>
+
+<br>
+
+<paper-button id='ButtonWidgetHandle' class='widgetbutton' onclick="ActivateWidgetHandle()">Handle</paper-button>
+<paper-button id='ButtonWidgetRuler' class='widgetbutton' onclick="ActivateWidgetRuler()">Ruler</paper-button>
+<paper-button id='ButtonWidgetVoxelProbe' class='widgetbutton' onclick="ActivateWidgetVoxelProbe()">VoxelProbe</paper-button>
+<paper-button id='ButtonWidgetAnnotation' class='widgetbutton' onclick="ActivateWidgetAnnotation()">Annotation</paper-button>
+<paper-button id='ButtonMove' class='widgetbutton' onclick="ActivateMove()">Move</paper-button>
+
+<dom-bind>
+
+  <template is="dom-bind" id="viewer">
+
+    <ami-loader2 files="[[files]]" urls="[[urls]]" series="{{series}}"></ami-loader2>
+    <div id="dropzone"> 
+    <ami-viewer2 id="dropZone" 
+      series="{{series}}" 
+      stackhelper={{stackhelper}} 
+      stack={{stack}}
+      controls={{controls}} 
+      camera={{camera}} 
+      threed={{threed}} 
+      scene={{scene}} 
+      renderer={{renderer}}>
+    </ami-viewer2>
+    <ami-widget2 
+      stackhelper=[[stackhelper]]
+      stack={{stack}} 
+      controls={{controls}} 
+      camera={{camera}} 
+      threed={{threed}} 
+      scene={{scene}} 
+      renderer={{renderer}}
+      guiobjects={{guiobjects}}>
+    </ami-widget2>
+    </div>
+  </template>
+</dom-bind>
+
+<button onclick="exportScene()">Export</button>
+<button onclick="clearScene()">Clear</button>
+<button onclick="importScene()">Import</button>
+
+  <script>
+
+
+  /////////////////////////////////////////////////////////////
+
+    // var t2 = ['36444280', '36444294', '36444308', '36444322', '36444336'];
+    // var urlarray = t2.map( function( v ) {
+    //   return 'https://cdn.rawgit.com/FNNDSC/data/master/dicom/adi_brain/' + v;
+    // } );
+
+    var urlarray = ['https://cdn.rawgit.com/FNNDSC/data/master/dicom/adi_brain/36444280'];
+
+    const loader = document.querySelector('dom-bind');
+
+    loader.urls = urlarray;
+
+    // const widgettt = document.querySelector('ami-widget2');
+    // widgettt.test();
+
+    // setInterval(function() {
+    //   console.log('camera=' + loader.camera);
+    //   //console.table(loader.camera);
+    //   console.log('controls=' + loader.controls);
+    //   //console.table(loader.controls);
+    //   console.log('stackhelper=' + loader.stackhelper);
+    //   //console.table(loader.stackhelper);
+    //   console.log('tEst=' + loader.tEst);
+    // }, 3000);
+
+
+
+    function LoadUrls(  ){
+      inputurls = document.getElementById('inputurls').value;
+      loader.urls = inputurls.split("\n");
+    }
+
+
+
+    function attachFiles( evt ){
+
+      // convert files object to an array
+      var files = [];
+      for ( var i = 0; i < evt.target.files.length; i++ ) {
+        console.log('evt.target.files[i] =' + evt.target.files[i])
+        files.push( evt.target.files[i] );
+
+      }
+
+      console.log('files =' + files)
+
+      loader.files =  files;
+
+    };
+
+    document.querySelector( '#input' ).addEventListener('change', attachFiles, false);
+
+
+    ////////////////////
+
+
+    var dropZone = document.getElementById('dropZone');
+
+    // Optional.   Show the copy icon when dragging over.  Seems to only work for chrome.
+    dropZone.addEventListener('dragover', function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+    });
+
+    // Get file data on drop
+    dropZone.addEventListener('drop', function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        var files = e.dataTransfer.files; // Array of all files
+
+        var dicomarray = [];
+
+        for (var i=0, file; file=files[i]; i++) {
+
+                dicomarray.push(file);
+                
+        }
+        loader.files = dicomarray;
+    });
+
+    loader.widgets = "test"
+
+
+    // setTimeout(function() {
+    //     document.querySelector('ami-widget2').init();
+    // }, 4500);
+
+
+    function restartbackgroundbuttons(classname) {
+      elements = document.getElementsByClassName(classname);
+      for (var i = 0; i < elements.length; i++) {
+          elements[i].style.backgroundColor="initial";
+      }
+    }
+
+    function ActivateWidgetHandle(  ){
+      restartbackgroundbuttons('widgetbutton');
+      document.getElementById("ButtonWidgetHandle").style.background='#81D4FA';
+      loader.guiobjects = {type: 'Handle'};
+    }
+
+    function ActivateWidgetRuler(  ){
+      restartbackgroundbuttons('widgetbutton');
+      document.getElementById("ButtonWidgetRuler").style.background='#81D4FA';
+      loader.guiobjects = {type: 'Ruler'};
+    }
+
+    function ActivateWidgetVoxelProbe(  ){
+      restartbackgroundbuttons('widgetbutton');
+      document.getElementById("ButtonWidgetVoxelProbe").style.background='#81D4FA';
+      loader.guiobjects = {type: 'VoxelProbe'};
+    }
+
+    function ActivateWidgetAnnotation(  ){
+      restartbackgroundbuttons('widgetbutton');
+      document.getElementById("ButtonWidgetAnnotation").style.background='#81D4FA';
+      loader.guiobjects = {type: 'Annotation'};
+    }
+
+    function ActivateMove(  ){
+      restartbackgroundbuttons('widgetbutton');
+      document.getElementById("ButtonMove").style.background='#81D4FA';
+      loader.guiobjects = {type: null};
+    }
+
+    
+    const widgetelement = document.querySelector('ami-widget2');
+
+    function exportScene () {
+        widgetelement.exportScene();
+    }
+
+    function clearScene () {
+        widgetelement.clearScene();
+    }
+
+    function importScene () {
+        widgetelement.importScene();
+    }
+
+
+    document.querySelector('ami-loader2').addEventListener('loaded', function(e) {
+      document.querySelector('ami-widget2').init();
+    }.bind(this));
+
+
+    // var gui = new dat.GUI();
+    // gui.add(controls, "exportScene");
+    // gui.add(controls, "clearScene");
+    // gui.add(controls, "importScene");
+
+
+
+  </script>
+</body>
+</html>

@@ -1,0 +1,291 @@
+<link rel="import" href="/bower_components/polymer/polymer.html">
+<link rel="import" href="/bower_components/polymer/polymer-element.html">
+<link rel="import" href="/bower_components/ami-import/ami-import.html">
+
+<!-- <script type="text/javascript" src="http://www.smartjava.org/ltjs/libs/SceneExporter.js"></script> -->
+
+<!--
+AMI Viewer element!
+
+`ami-viewer` takes an array of data organized by series/stacks/frames (provided by the [ami-loader](http://fnndsc.github.io/ami-loader) and displays it.
+
+@demo demo/index.html
+-->
+
+<dom-module id="ami-widget2">
+  <template>
+
+  </template>
+
+  <script>
+
+
+    class AmiWidget2 extends Polymer.Element {
+
+      static get is() { return 'ami-widget2'; }
+
+      static get properties() {
+        return {
+
+          stackhelper: {
+            type: Object,
+            value: null,
+            notify: true
+          },
+
+          stack: {
+            type: Object,
+            value: null,
+            notify: true
+          },
+
+          camera: {
+            type: Object,
+            value: null,
+            notify: true
+          },
+
+          controls: {
+            type: Object,
+            value: null,
+            notify: true
+          },
+
+          widgets: {
+            type: Array,
+            value: [],
+            notify: true
+            //observer: '_widgetadded'
+          },
+
+          threed: {
+            type: Object,
+            value: null,
+            notify: true
+          },
+
+          scene: {
+            type: Object,
+            value: null,
+            notify: true
+          },
+
+        guiobjects: { //Handle by default
+          type: Object,
+          value: {
+            type: null,
+          },
+          notify: true
+        }
+      };
+    }
+
+    test() {
+      console.log("AMI-widget2 test function reached");
+      console.log('this.threed =' + this.threed);
+    }
+
+    _widgetadded ( evt ){
+      console.log("widget has been changed");  
+    }
+
+    init() {
+      console.log('INIT widget');
+
+      const self = this;
+
+      window.addEventListener('resize', this.onWindowResize, false);
+      this.onWindowResize(); 
+
+      this.threed.addEventListener('mouseup', function(evt) {
+        //if something hovered, exit
+        for (let widget of self.widgets) {
+          if (widget.active) {
+            widget.onEnd(evt);
+            return;
+          }
+        }
+      });
+
+      this.threed.addEventListener('mousemove', function(evt) {
+        // if something hovered, exit
+        let cursor = 'default';
+        for (let widget of self.widgets) {
+          console.log('widget en Move =' + widget);
+          widget.onMove(evt);
+          if (widget.hovered) {
+            cursor = 'pointer';
+          }
+        }
+        // this.threed.style.cursor = cursor;
+      });
+
+
+      this.threed.addEventListener('mousedown', function(evt) {
+        // if something hovered, exit
+        for (let widget of self.widgets) {
+          if (widget.hovered) {
+            console.log('widget en Start =' + widget);
+            widget.onStart(evt);
+            return;
+          }
+        }
+
+        // threeD.style.cursor = 'default';
+
+        // mouse position
+        let mouse = {
+          x: ((event.clientX - self.offsets.left) / self.threed.offsetWidth * 2 - 1),
+          y: (-((event.clientY - self.offsets.top) / self.threed.offsetHeight)* 2 + 1),
+        };
+
+        // console.log('self.threed.offsetWidth = ' + self.threed.offsetWidth);
+        // console.log('self.offsets.left = ' + self.offsets.left);
+
+
+        // // update the raycaster
+        let raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(mouse, self.camera);
+        let intersects = raycaster.intersectObject(self.stackhelper.slice.mesh);
+
+        if (intersects.length <= 0) {
+          return;
+        }
+
+        console.log('self.stack='+self.stack);
+
+        let widget = null;
+        switch (self.guiobjects.type) {
+          case null:
+            return
+          case 'Handle':
+            widget =
+              new AMI.default.Widgets.Handle (self.stackhelper.slice.mesh, self.controls, self.camera, self.threed);
+            widget.worldPosition = intersects[0].point;
+            break;
+          case 'Ruler':
+            widget =
+              new AMI.default.Widgets.Ruler (self.stackhelper.slice.mesh, self.controls, self.camera, self.threed);
+            widget.worldPosition = intersects[0].point;
+            break;
+          case 'VoxelProbe':
+            widget =
+              new AMI.default.Widgets.VoxelProbe (self.stack, self.stackhelper.slice.mesh, self.controls, self.camera, self.threed);
+            widget.worldPosition = intersects[0].point;
+            break;
+          case 'Annotation':
+            widget =
+              new AMI.default.Widgets.Annotation (self.stackhelper.slice.mesh, self.controls, self.camera, self.threed);
+            widget.worldPosition = intersects[0].point;
+            break;
+          // default:
+          //   widget =
+          //     new WidgetsHandle(stackhelper.slice.mesh, controls, camera, threeD);
+          //   widget.worldPosition = intersects[0].point;
+          //   break;
+        }
+
+        //
+
+        self.widgets.push(widget);
+        self.scene.add(widget);
+
+        
+        console.log("scene.add(widget) !!!");
+    });
+
+
+    //this.updateMatrix();
+
+
+    }
+
+    updateMatrix (){
+        self = this;
+        const centerLPS = self.stack.worldCenter();
+        this.camera.lookAt(centerLPS.x, centerLPS.y, centerLPS.z);
+        this.controls.target.set(centerLPS.x, centerLPS.y, centerLPS.z);
+        this.camera.updateProjectionMatrix();
+    }
+
+
+    onWindowResize() {
+
+      self = this;
+
+      console.log('this.threed = ');
+      console.log(this.threed);
+
+      this.camera.aspect = this.threed.clientWidth / this.threed.clientHeight;
+      this.camera.updateProjectionMatrix();
+      this.renderer.setSize(self.threed.clientWidth, self.threed.clientHeight);
+
+      // update offset
+      const box = this.threed.getBoundingClientRect();
+
+      const body = document.body;
+      const docEl = document.documentElement;
+
+      const scrollTop = window.pageYOffset || docEl.scrollTop || body.scrollTop;
+      const scrollLeft =
+        window.pageXOffset || docEl.scrollLeft || body.scrollLeft;
+
+      const clientTop = docEl.clientTop || body.clientTop || 0;
+      const clientLeft = docEl.clientLeft || body.clientLeft || 0;
+
+      const top = box.top + scrollTop - clientTop;
+      const left = box.left + scrollLeft - clientLeft;
+
+      this.offsets = {
+        top: Math.round(top),
+        left: Math.round(left),
+      };
+
+      console.log('this.offsets.top =' + Math.round(top));
+      console.log('this.offsets.left =' + Math.round(left));
+
+      console.log('offsets=');
+      console.log(this.offsets);
+
+      // repaint all widgets
+      // for (let widget of this.widgets) {
+      //   widget.update();
+      // }
+    }
+
+
+
+
+
+    exportScene () {
+        self = this;
+        var exporter = new THREE.SceneExporter();
+        var sceneJson = JSON.stringify(exporter.parse(self.scene));
+        localStorage.setItem('scene', sceneJson);
+    }
+
+    clearScene () {
+        this.scene = new THREE.Scene();
+    }
+
+    importScene () {
+        self = this;
+        var json = (localStorage.getItem('scene'));
+        var sceneLoader = new THREE.SceneLoader();
+
+        sceneLoader.parse(JSON.parse(json), function (e) {
+            console.log(e);
+            this.scene = e.scene;
+        }, '.');
+    }
+
+
+    
+
+
+    };
+
+  customElements.define(AmiWidget2.is, AmiWidget2);
+
+  </script>
+</dom-module>

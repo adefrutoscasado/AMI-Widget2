@@ -1,0 +1,9 @@
+{
+  "name": "polymer-2-ami-application",
+  "private": true,
+  "dependencies": {
+    "polymer": "Polymer/polymer#2",
+    "paper-button": "PolymerElements/paper-button#^v2.0.0",
+    "ami-import": "NicolasRannou/ami-import#^v0.0.14"
+  }
+}
