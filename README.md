@@ -9,11 +9,12 @@ AMI-Widget2 is a Polymer 2 application to add widgets easily to your AMI Polymer
 You should use the Polymer 2 versions of AMI-viewer and AMI-loader (they are provided in the example). The code should be:
 
 ```sh
-<ami-loader2 files="[[files]]" 
+<ami-loader2 
+    files="[[files]]" 
     urls="[[urls]]" 
     series="{{series}}">
 </ami-loader2>
-<ami-viewer2 id="dropZone" 
+<ami-viewer2
       series="{{series}}" 
       stackhelper={{stackhelper}} 
       stack={{stack}}
